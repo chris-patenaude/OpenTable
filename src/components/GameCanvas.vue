@@ -39,10 +39,12 @@ export default {
       let isDrawing = false;
       let lastLine;
       let startPos;
+      let gridStartPos;
 
       stage.on('mousedown', () => {
         isDrawing = true;
         startPos = stage.getPointerPosition();
+
         lastLine = new Konva.Rect({
           x: startPos.x,
           y: startPos.y,
@@ -69,19 +71,29 @@ export default {
 
       stage.on('mouseup', () => {
         isDrawing = false;
+        console.log("GameCanvas: Drawing Grid...")
 
         // Create grid based on lastLine size
         const cellSize = lastLine.width(); // Assuming square cells
+        const offset = {
+          x: -Math.floor(stage.width() / cellSize),
+          y: -Math.floor(stage.height() / cellSize),
+        }
+        gridStartPos = {
+          x: startPos.x + offset.x * cellSize,
+          y: startPos.y + offset.y * cellSize,
+        };
+
         const gridSize = {
-          rows: Math.floor(Math.max(stage.width(), startPos.x + cellSize) / cellSize),
-          cols: Math.floor(Math.max(stage.height(), startPos.y + cellSize) / cellSize),
+          rows: Math.floor(Math.max(stage.width() * 2, gridStartPos.x + cellSize) / cellSize),
+          cols: Math.floor(Math.max(stage.height() * 2, gridStartPos.y + cellSize) / cellSize),
         };
 
         for (let i = 0; i < gridSize.rows; i++) {
           for (let j = 0; j < gridSize.cols; j++) {
             const gridCell = new Konva.Rect({
-              x: startPos.x + i * cellSize,
-              y: startPos.y + j * cellSize,
+              x: gridStartPos.x + i * cellSize,
+              y: gridStartPos.y + j * cellSize,
               width: cellSize,
               height: cellSize,
               stroke: 'grey',
@@ -97,6 +109,7 @@ export default {
 
         lastLine.moveToTop();
         layer.batchDraw();
+        console.log("GameCanvas: Grid drawn.")
       });
     });
 
