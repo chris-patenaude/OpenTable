@@ -1,6 +1,6 @@
 <template>
   <img alt="Vue logo" src="./assets/logo.png">
-  <div >
+  <div class="app">
     <GameCanvas></GameCanvas>
   </div>
 </template>
