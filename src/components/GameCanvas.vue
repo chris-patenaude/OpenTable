@@ -8,18 +8,95 @@ import Konva from 'konva';
 
 export default {
   setup() {
+    let isDrawing = ref(false);
+    let gridDrawn = ref(false)
     const container = ref(null);
-    let stage;
+    let lastLine = ref(null);
+    let startPos = ref(null);
+    let gridStartPos = ref(null);
+    let stage = ref(null);
+    let layer = ref(null);
 
-    onMounted(() => {
-      stage = new Konva.Stage({
+    function drawGameGrid() {
+      console.log("GameCanvas: Drawing Grid...")
+      isDrawing.value = false;
+      // Create grid based on lastLine size
+      const cellSize = lastLine.value.width(); // Assuming square cells
+      const offset = {
+        x: -Math.floor(stage.value.width() / cellSize),
+        y: -Math.floor(stage.value.height() / cellSize),
+      }
+      gridStartPos.value = {
+        x: startPos.value.x + offset.x * cellSize,
+        y: startPos.value.y + offset.y * cellSize,
+      };
+
+      const gridSize = {
+        rows: Math.floor(Math.max(stage.value.width() * 2, gridStartPos.value.x + cellSize) / cellSize),
+        cols: Math.floor(Math.max(stage.value.height() * 2, gridStartPos.value.y + cellSize) / cellSize),
+      };
+
+      for (let i = 0; i < gridSize.rows; i++) {
+        for (let j = 0; j < gridSize.cols; j++) {
+          const gridCell = new Konva.Rect({
+            x: gridStartPos.value.x + i * cellSize,
+            y: gridStartPos.value.y + j * cellSize,
+            width: cellSize,
+            height: cellSize,
+            stroke: 'grey',
+            strokeWidth: 1,
+          });
+          layer.value.add(gridCell);
+        }
+      }
+
+      // Set new stage dimensions
+      stage.value.width(gridSize.rows * cellSize);
+      stage.value.height(gridSize.cols * cellSize);
+
+      // Remove lastLine Rect when no longer needed
+      lastLine.value.remove();
+      layer.value.batchDraw();
+      gridDrawn.value = true;
+      console.log("GameCanvas: Grid drawn.")
+    }
+
+    function drawUserSquare() {
+      if (!isDrawing.value) {
+        return;
+      }
+      const pointerPos = stage.value.getPointerPosition();
+      const dimension = Math.min(pointerPos.x - startPos.value.x, pointerPos.y - startPos.value.y);
+      lastLine.value.width(dimension);
+      lastLine.value.height(dimension);
+      layer.value.batchDraw();
+    }
+
+    function setStartPos() {
+      isDrawing.value = true;
+      startPos.value = stage.value.getPointerPosition();
+
+      lastLine.value = new Konva.Rect({
+        x: startPos.value.x,
+        y: startPos.value.y,
+        width: 0,
+        height: 0,
+        stroke: 'black',
+        strokeWidth: 2,
+        draggable: true,
+      });
+      layer.value.add(lastLine.value);
+    }
+
+    function initGameBoard() {
+      stage.value = new Konva.Stage({
         container: container.value, // Container to render to
         width: window.innerWidth,
         height: window.innerHeight,
       });
 
-      const layer = new Konva.Layer();
-      stage.add(layer);
+      layer.value = new Konva.Layer();
+      stage.value.add(layer.value);
 
       const imageObj = new window.Image();
       imageObj.src = 'https://i.etsystatic.com/18388031/r/il/8b7a49/2796267092/il_fullxfull.2796267092_aezx.jpg'; // specify path to your image
@@ -28,88 +105,39 @@ export default {
           x: 0,
           y: 0,
           image: imageObj,
-          width: stage.width(),
-          height: stage.height(),
+          width: stage.value.width(),
+          height: stage.value.height(),
         });
 
-        layer.add(img);
-        layer.draw();
+        layer.value.add(img);
+        layer.value.draw();
       };
 
-      let isDrawing = false;
-      let lastLine;
-      let startPos;
-      let gridStartPos;
+    }
 
-      stage.on('mousedown', () => {
-        isDrawing = true;
-        startPos = stage.getPointerPosition();
 
-        lastLine = new Konva.Rect({
-          x: startPos.x,
-          y: startPos.y,
-          width: 0,
-          height: 0,
-          stroke: 'black',
-          strokeWidth: 2,
-          draggable: true,
-        });
-        layer.add(lastLine);
-      });
+    onMounted(() => {
+      initGameBoard();
 
-      stage.on('mousemove', () => {
-        if (!isDrawing) {
+      stage.value.on('mousedown', () => {
+        if (gridDrawn.value) {
           return;
         }
-        const pointerPos = stage.getPointerPosition();
-        const dimension = Math.min(pointerPos.x - startPos.x, pointerPos.y - startPos.y);
-
-        lastLine.width(dimension);
-        lastLine.height(dimension);
-        layer.batchDraw();
+        setStartPos();
       });
 
-      stage.on('mouseup', () => {
-        isDrawing = false;
-        console.log("GameCanvas: Drawing Grid...")
-
-        // Create grid based on lastLine size
-        const cellSize = lastLine.width(); // Assuming square cells
-        const offset = {
-          x: -Math.floor(stage.width() / cellSize),
-          y: -Math.floor(stage.height() / cellSize),
+      stage.value.on('mousemove', () => {
+        if (gridDrawn.value) {
+          return
         }
-        gridStartPos = {
-          x: startPos.x + offset.x * cellSize,
-          y: startPos.y + offset.y * cellSize,
-        };
+        drawUserSquare();
+      });
 
-        const gridSize = {
-          rows: Math.floor(Math.max(stage.width() * 2, gridStartPos.x + cellSize) / cellSize),
-          cols: Math.floor(Math.max(stage.height() * 2, gridStartPos.y + cellSize) / cellSize),
-        };
-
-        for (let i = 0; i < gridSize.rows; i++) {
-          for (let j = 0; j < gridSize.cols; j++) {
-            const gridCell = new Konva.Rect({
-              x: gridStartPos.x + i * cellSize,
-              y: gridStartPos.y + j * cellSize,
-              width: cellSize,
-              height: cellSize,
-              stroke: 'grey',
-              strokeWidth: 1,
-            });
-            layer.add(gridCell);
-          }
+      stage.value.on('mouseup', () => {
+        if (gridDrawn.value) {
+          return
         }
-
-        // Set new stage dimensions
-        stage.width(gridSize.rows * cellSize);
-        stage.height(gridSize.cols * cellSize);
-
-        lastLine.moveToTop();
-        layer.batchDraw();
-        console.log("GameCanvas: Grid drawn.")
+        drawGameGrid()
       });
     });
 
