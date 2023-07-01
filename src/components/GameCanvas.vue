@@ -8,7 +8,7 @@ import Konva from 'konva';
 
 export default {
   setup() {
-    const cellCenters = ref([]); // Used to snap tokens to grid
+    const cellCoordinates = ref([]); // Used to snap tokens to grid
     const isDrawing = ref(false);
     const gridDrawn = ref(false)
     const container = ref(null);
@@ -25,7 +25,7 @@ export default {
       console.log("GameCanvas: Drawing Grid...")
       isDrawing.value = false;
 
-      cellCenters.value = []; // Clear previous cell centers
+      cellCoordinates.value = []; // Clear previous cell centers
 
       const cellSize = lastLine.value.width(); // Assuming square cells
       const offset = {
@@ -51,16 +51,16 @@ export default {
 
       for (let i = 0; i < gridSize.rows; i++) {
         for (let j = 0; j < gridSize.cols; j++) {
-          const localCenterX = gridStartPos.value.x + i * cellSize + cellSize / 2;
-          const localCenterY = gridStartPos.value.y + j * cellSize + cellSize / 2;
+          const localCornerX = gridStartPos.value.x + i * cellSize;
+          const localCornerY = gridStartPos.value.y + j * cellSize;
 
-          // Convert local center coordinates to stage coordinates
-          const stageCenter = localToStage({ x: localCenterX, y: localCenterY });
+          // Convert local corner coordinates to stage coordinates
+          const stageCorner = localToStage({ x: localCornerX, y: localCornerY });
 
           // Save the center of each cell in stage coordinates
-          cellCenters.value.push(stageCenter);
+          cellCoordinates.value.push(stageCorner);
 
-          context.strokeRect(gridStartPos.value.x + i * cellSize, gridStartPos.value.y + j * cellSize, cellSize, cellSize);
+          context.strokeRect(localCornerX, localCornerY, cellSize, cellSize);
         }
       }
 
