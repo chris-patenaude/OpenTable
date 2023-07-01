@@ -5,6 +5,7 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
+    "deploy": "./scripts/deploy_gh_page.sh",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
