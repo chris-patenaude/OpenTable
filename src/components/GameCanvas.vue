@@ -16,6 +16,9 @@ export default {
     let gridStartPos = ref(null);
     let stage = ref(null);
     let layer = ref(null);
+    // let lastDist = ref(0);
+    // let isPanning = ref(false);
+    // let lastPointerPos = ref({ x: 0, y: 0 });
 
     async function drawGameGrid() {
       console.log("GameCanvas: Drawing Grid...")
@@ -37,25 +40,32 @@ export default {
         cols: Math.floor(Math.max(stage.value.height() * 2, gridStartPos.value.y + cellSize) / cellSize),
       };
 
-      // Store all cells first, instead of adding to layer immediately
-      let cells = [];
+      const canvasElement = document.createElement('canvas');
+      canvasElement.width = gridSize.rows * cellSize;
+      canvasElement.height = gridSize.cols * cellSize;
+
+      const context = canvasElement.getContext('2d');
 
       for (let i = 0; i < gridSize.rows; i++) {
         for (let j = 0; j < gridSize.cols; j++) {
-          const gridCell = new Konva.Rect({
-            x: gridStartPos.value.x + i * cellSize,
-            y: gridStartPos.value.y + j * cellSize,
-            width: cellSize,
-            height: cellSize,
-            stroke: 'grey',
-            strokeWidth: 1,
-          });
-          cells.push(gridCell);
+          context.strokeRect(gridStartPos.value.x + i * cellSize, gridStartPos.value.y + j * cellSize, cellSize, cellSize);
         }
       }
 
-      // Add all cells to layer at once
-      cells.forEach(cell => layer.value.add(cell));
+      const imageObj = new Image();
+      imageObj.onload = function() {
+        const img = new Konva.Image({
+          x: 0,
+          y: 0,
+          image: imageObj,
+          width: gridSize.rows * cellSize,
+          height: gridSize.cols * cellSize,
+        });
+
+        layer.value.add(img);
+        layer.value.draw();
+      }
+      imageObj.src = canvasElement.toDataURL();
 
       // Set new stage dimensions
       stage.value.width(gridSize.rows * cellSize);
@@ -63,9 +73,6 @@ export default {
 
       // Remove lastLine Rect when no longer needed
       lastLine.value.remove();
-
-      // Draw or batchDraw once after all elements have been added
-      layer.value.batchDraw();
 
       gridDrawn.value = true;
       console.log("GameCanvas: Grid drawn.")
@@ -149,6 +156,30 @@ export default {
           return
         }
         drawGameGrid()
+      });
+      stage.value.on('wheel', (e) => {
+        e.evt.preventDefault();
+
+        const oldScale = stage.value.scaleX();
+
+        const pointerPos = stage.value.getPointerPosition();
+
+        const mousePointTo = {
+          x: (pointerPos.x - stage.value.x()) / oldScale,
+          y: (pointerPos.y - stage.value.y()) / oldScale,
+        };
+
+        const newScale = e.evt.deltaY > 0 ? oldScale * 1.1 : oldScale * 0.9;
+
+        stage.value.scale({ x: newScale, y: newScale });
+
+        const newPos = {
+          x: pointerPos.x - mousePointTo.x * newScale,
+          y: pointerPos.y - mousePointTo.y * newScale,
+        };
+
+        stage.value.position(newPos);
+        stage.value.batchDraw();
       });
     });
 
