@@ -17,15 +17,16 @@ export default {
     let stage = ref(null);
     let layer = ref(null);
 
-    function drawGameGrid() {
+    async function drawGameGrid() {
       console.log("GameCanvas: Drawing Grid...")
       isDrawing.value = false;
-      // Create grid based on lastLine size
+
       const cellSize = lastLine.value.width(); // Assuming square cells
       const offset = {
         x: -Math.floor(stage.value.width() / cellSize),
         y: -Math.floor(stage.value.height() / cellSize),
       }
+
       gridStartPos.value = {
         x: startPos.value.x + offset.x * cellSize,
         y: startPos.value.y + offset.y * cellSize,
@@ -35,6 +36,9 @@ export default {
         rows: Math.floor(Math.max(stage.value.width() * 2, gridStartPos.value.x + cellSize) / cellSize),
         cols: Math.floor(Math.max(stage.value.height() * 2, gridStartPos.value.y + cellSize) / cellSize),
       };
+
+      // Store all cells first, instead of adding to layer immediately
+      let cells = [];
 
       for (let i = 0; i < gridSize.rows; i++) {
         for (let j = 0; j < gridSize.cols; j++) {
@@ -46,9 +50,12 @@ export default {
             stroke: 'grey',
             strokeWidth: 1,
           });
-          layer.value.add(gridCell);
+          cells.push(gridCell);
         }
       }
+
+      // Add all cells to layer at once
+      cells.forEach(cell => layer.value.add(cell));
 
       // Set new stage dimensions
       stage.value.width(gridSize.rows * cellSize);
@@ -56,10 +63,14 @@ export default {
 
       // Remove lastLine Rect when no longer needed
       lastLine.value.remove();
+
+      // Draw or batchDraw once after all elements have been added
       layer.value.batchDraw();
+
       gridDrawn.value = true;
       console.log("GameCanvas: Grid drawn.")
     }
+
 
     function drawUserSquare() {
       if (!isDrawing.value) {
