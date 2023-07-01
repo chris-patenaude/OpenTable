@@ -8,21 +8,24 @@ import Konva from 'konva';
 
 export default {
   setup() {
-    let isDrawing = ref(false);
-    let gridDrawn = ref(false)
+    const cellCenters = ref([]); // Used to snap tokens to grid
+    const isDrawing = ref(false);
+    const gridDrawn = ref(false)
     const container = ref(null);
-    let lastLine = ref(null);
-    let startPos = ref(null);
-    let gridStartPos = ref(null);
-    let stage = ref(null);
-    let layer = ref(null);
-    // let lastDist = ref(0);
-    // let isPanning = ref(false);
-    // let lastPointerPos = ref({ x: 0, y: 0 });
+    const lastLine = ref(null);
+    const startPos = ref(null);
+    const gridStartPos = ref(null);
+    const stage = ref(null);
+    const layer = ref(null);
+    const isPanning = ref(false);
+    const lastPointerPos = ref({ x: 0, y: 0 });
+
 
     async function drawGameGrid() {
       console.log("GameCanvas: Drawing Grid...")
       isDrawing.value = false;
+
+      cellCenters.value = []; // Clear previous cell centers
 
       const cellSize = lastLine.value.width(); // Assuming square cells
       const offset = {
@@ -48,6 +51,15 @@ export default {
 
       for (let i = 0; i < gridSize.rows; i++) {
         for (let j = 0; j < gridSize.cols; j++) {
+          const localCenterX = gridStartPos.value.x + i * cellSize + cellSize / 2;
+          const localCenterY = gridStartPos.value.y + j * cellSize + cellSize / 2;
+
+          // Convert local center coordinates to stage coordinates
+          const stageCenter = localToStage({ x: localCenterX, y: localCenterY });
+
+          // Save the center of each cell in stage coordinates
+          cellCenters.value.push(stageCenter);
+
           context.strokeRect(gridStartPos.value.x + i * cellSize, gridStartPos.value.y + j * cellSize, cellSize, cellSize);
         }
       }
@@ -76,6 +88,15 @@ export default {
 
       gridDrawn.value = true;
       console.log("GameCanvas: Grid drawn.")
+    }
+
+    function localToStage(localPoint) {
+      const scale = stage.value.scaleX(); // Assuming scaleX and scaleY are the same
+      const stagePos = stage.value.position();
+      return {
+        x: localPoint.x * scale + stagePos.x,
+        y: localPoint.y * scale + stagePos.y,
+      };
     }
 
 
@@ -138,24 +159,44 @@ export default {
       initGameBoard();
 
       stage.value.on('mousedown', () => {
-        if (gridDrawn.value) {
+        if (!gridDrawn.value) {
+          setStartPos();
           return;
         }
-        setStartPos();
+        const pointerPos = stage.value.getPointerPosition();
+        lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
+        isPanning.value = true;
       });
 
       stage.value.on('mousemove', () => {
-        if (gridDrawn.value) {
-          return
+        if (!gridDrawn.value) {
+          drawUserSquare();
+          return;
         }
-        drawUserSquare();
+        if (!isPanning.value) {
+          return;
+        }
+        const pointerPos = stage.value.getPointerPosition();
+        const deltaX = pointerPos.x - lastPointerPos.value.x;
+        const deltaY = pointerPos.y - lastPointerPos.value.y;
+
+        const newPos = {
+          x: stage.value.x() + deltaX,
+          y: stage.value.y() + deltaY,
+        };
+
+        stage.value.position(newPos);
+        stage.value.batchDraw();
+
+        lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
       });
 
       stage.value.on('mouseup', () => {
-        if (gridDrawn.value) {
+        if (!gridDrawn.value) {
+          drawGameGrid()
           return
         }
-        drawGameGrid()
+        isPanning.value = false;
       });
       stage.value.on('wheel', (e) => {
         e.evt.preventDefault();
