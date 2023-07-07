@@ -154,74 +154,74 @@ export default {
 
     }
 
+    function handleMouseDown () {
+      if (!gridDrawn.value) {
+        setStartPos();
+        return;
+      }
+      const pointerPos = stage.value.getPointerPosition();
+      lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
+      isPanning.value = true;
+    }
+
+    function handleMouseMove () {
+      if (!gridDrawn.value) {
+        drawUserSquare();
+        return;
+      }
+      if (!isPanning.value) {
+        return;
+      }
+      const pointerPos = stage.value.getPointerPosition();
+      const deltaX = pointerPos.x - lastPointerPos.value.x;
+      const deltaY = pointerPos.y - lastPointerPos.value.y;
+
+      const newPos = {
+        x: stage.value.x() + deltaX,
+        y: stage.value.y() + deltaY,
+      };
+
+      stage.value.position(newPos);
+      stage.value.batchDraw();
+
+      lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
+    }
+
+    function handleMouseUp () {
+      if (!gridDrawn.value) {
+        drawGameGrid()
+        return
+      }
+      isPanning.value = false;
+    }
+
+    function handleWheel (e) {
+      e.evt.preventDefault();
+      const oldScale = stage.value.scaleX();
+      const pointerPos = stage.value.getPointerPosition();
+      const mousePointTo = {
+        x: (pointerPos.x - stage.value.x()) / oldScale,
+        y: (pointerPos.y - stage.value.y()) / oldScale,
+      };
+      const newScale = e.evt.deltaY > 0 ? oldScale * 1.1 : oldScale * 0.9;
+
+      stage.value.scale({ x: newScale, y: newScale });
+
+      const newPos = {
+        x: pointerPos.x - mousePointTo.x * newScale,
+        y: pointerPos.y - mousePointTo.y * newScale,
+      };
+
+      stage.value.position(newPos);
+      stage.value.batchDraw();
+    }
 
     onMounted(() => {
       initGameBoard();
-
-      stage.value.on('mousedown', () => {
-        if (!gridDrawn.value) {
-          setStartPos();
-          return;
-        }
-        const pointerPos = stage.value.getPointerPosition();
-        lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
-        isPanning.value = true;
-      });
-
-      stage.value.on('mousemove', () => {
-        if (!gridDrawn.value) {
-          drawUserSquare();
-          return;
-        }
-        if (!isPanning.value) {
-          return;
-        }
-        const pointerPos = stage.value.getPointerPosition();
-        const deltaX = pointerPos.x - lastPointerPos.value.x;
-        const deltaY = pointerPos.y - lastPointerPos.value.y;
-
-        const newPos = {
-          x: stage.value.x() + deltaX,
-          y: stage.value.y() + deltaY,
-        };
-
-        stage.value.position(newPos);
-        stage.value.batchDraw();
-
-        lastPointerPos.value = { x: pointerPos.x, y: pointerPos.y };
-      });
-
-      stage.value.on('mouseup', () => {
-        if (!gridDrawn.value) {
-          drawGameGrid()
-          return
-        }
-        isPanning.value = false;
-      });
-      stage.value.on('wheel', (e) => {
-        e.evt.preventDefault();
-
-        const oldScale = stage.value.scaleX();
-
-        const pointerPos = stage.value.getPointerPosition();
-
-        const mousePointTo = {
-          x: (pointerPos.x - stage.value.x()) / oldScale,
-          y: (pointerPos.y - stage.value.y()) / oldScale,
-        };
-
-        const newScale = e.evt.deltaY > 0 ? oldScale * 1.1 : oldScale * 0.9;
-
-        stage.value.scale({ x: newScale, y: newScale });
-
-        const newPos = {
-          x: pointerPos.x - mousePointTo.x * newScale,
-          y: pointerPos.y - mousePointTo.y * newScale,
-        };
-
-        stage.value.position(newPos);
-        stage.value.batchDraw();
-      });
+      stage.value.on('mousedown', handleMouseDown);
+      stage.value.on('mousemove', handleMouseMove);
+      stage.value.on('mouseup', handleMouseUp);
+      stage.value.on('wheel', handleWheel);
     });
 
     return { container };
